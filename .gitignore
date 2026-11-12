@@ -2,7 +2,8 @@
 Thumbs.db
 *.bak
 *~
-.swp
+*.swp
+.*.swp
 *.mp3
 cover.webp
 AGENTS.md

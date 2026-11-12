@@ -18,7 +18,7 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
-          tar -czf - --exclude='.git' --exclude='.github' --exclude='.gitignore' --exclude='AGENTS.md' . | ssh -o StrictHostKeyChecking=accept-new root@151.245.112.241 "
+          tar -czf - --exclude='.git' --exclude='.github' --exclude='.gitignore' --exclude='AGENTS.md' --exclude='.DS_Store' --exclude='Thumbs.db' --exclude='*.bak' --exclude='*~' --exclude='*.swp' . | ssh -o StrictHostKeyChecking=accept-new root@151.245.112.241 "
             set -euo pipefail
             tar -xzf - -C /var/www/84.lu
             cp -a /var/www/84.lu/. /var/www/bio.openrepo.me/
