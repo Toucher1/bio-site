@@ -121,25 +121,33 @@ html { scroll-behavior: smooth; overflow-anchor: none; } body { background: var(
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches, canvas = document.getElementById('shapes-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d'), shapes = [
-    { x: .12, y: .18, r: .25, c: '--md-sys-color-primary-container', a: .32, phX: 0, phY: 1.5, spX: .008, spY: .011, amp: 38 }, { x: .88, y: .35, r: .22, c: '--md-sys-color-tertiary-container', a: .34, phX: 2.3, phY: .8, spX: .009, spY: .013, amp: 34 },
-    { x: .22, y: .75, r: .24, c: '--md-sys-color-secondary-container', a: .28, phX: 4.1, phY: 3.2, spX: .011, spY: .008, amp: 32 }, { x: .92, y: .86, r: .18, c: '--md-sys-color-surface-container-high', a: .40, phX: 1.2, phY: 4.5, spX: .013, spY: .010, amp: 26, isPill: true }
+    { type: 'clover', lobes: 10, x: .15, y: .20, r: .22, c: '--md-sys-color-primary-container', a: .28, rot: .4, spR: .0018, ph: 0, spPh: .011, ampX: 28, ampY: 24, wave: .08 },
+    { type: 'pill',              x: .85, y: .22, r: .20, c: '--md-sys-color-tertiary-container', a: .25, rot: .55, spR: -.0015, ph: 1.8, spPh: .013, ampX: 24, ampY: 26 },
+    { type: 'clover', lobes: 7,  x: .88, y: .68, r: .23, c: '--md-sys-color-secondary-container', a: .26, rot: -.8, spR: .0016, ph: 3.5, spPh: .010, ampX: 26, ampY: 30, wave: .075 },
+    { type: 'clover', lobes: 4,  x: .14, y: .80, r: .21, c: '--md-sys-color-surface-container-high', a: .38, rot: 1.1, spR: -.0017, ph: 5.2, spPh: .012, ampX: 25, ampY: 22, wave: .065 }
   ];
-  let w = 0, h = 0, colors = {};
+  let w = 0, h = 0, rafId = 0, colors = {};
   const updateColors = () => { const s = getComputedStyle(document.documentElement); shapes.forEach(sh => colors[sh.c] = s.getPropertyValue(sh.c).trim() || '#2E5330'); };
   const render = () => {
     ctx.clearRect(0, 0, w, h); const minDim = Math.min(w, h);
     for (const s of shapes) {
-      if (!reduce) { s.phX += s.spX; s.phY += s.spY; }
-      const cx = s.x * w + Math.sin(s.phX) * s.amp, cy = s.y * h + Math.cos(s.phY) * s.amp, r = Math.max(100, minDim * s.r);
-      ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = colors[s.c]; ctx.globalAlpha = s.a; ctx.beginPath();
-      if (s.isPill) ctx.roundRect(-r * .8, -r * .4, r * 1.6, r * .8, r * .4);
-      else for (let i = 0; i <= 60; i++) { const a = (i / 60) * Math.PI * 2, rad = r + (r * .12) * Math.cos(5 * a); ctx[i ? 'lineTo' : 'moveTo'](rad * Math.cos(a), rad * Math.sin(a)); }
+      if (!reduce) { s.rot += s.spR; s.ph += s.spPh; }
+      const cx = s.x * w + Math.cos(s.ph) * s.ampX, cy = s.y * h + Math.sin(s.ph * .85) * s.ampY, r = Math.max(100, minDim * s.r);
+      const scale = 1 + Math.sin(s.ph * 1.2) * 0.045;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(s.rot); ctx.scale(scale, scale); ctx.fillStyle = colors[s.c]; ctx.globalAlpha = s.a; ctx.beginPath();
+      if (s.type === 'pill') { const pw = r * 1.5, ph = r * .75; ctx.roundRect(-pw / 2, -ph / 2, pw, ph, ph / 2); }
+      else { const amp = r * s.wave * (.85 + .25 * Math.sin(s.ph)); for (let i = 0; i <= 90; i++) { const th = (i / 90) * Math.PI * 2, rad = r + amp * Math.cos(s.lobes * th); ctx[i ? 'lineTo' : 'moveTo'](rad * Math.cos(th), rad * Math.sin(th)); } }
       ctx.fill(); ctx.restore();
     }
-    if (!reduce) requestAnimationFrame(render);
+    if (!reduce && !document.hidden) rafId = requestAnimationFrame(render);
   };
-  const resize = () => { w = canvas.width = innerWidth; h = canvas.height = innerHeight; updateColors(); render(); };
+  const resize = () => { w = canvas.width = innerWidth; h = canvas.height = innerHeight; updateColors(); if (reduce) render(); };
   addEventListener('resize', resize); resize();
+  if (!reduce) rafId = requestAnimationFrame(render);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { cancelAnimationFrame(rafId); rafId = 0; }
+    else if (!reduce && !rafId) rafId = requestAnimationFrame(render);
+  });
   addEventListener('scroll', () => document.getElementById('topbar')?.classList.toggle('docked', scrollY > 8), { passive: true });
 })();
 
