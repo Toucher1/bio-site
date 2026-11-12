@@ -17,9 +17,8 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H 151.245.112.241 >> ~/.ssh/known_hosts
 
-          tar -czf - --exclude='.git' --exclude='.github' . | ssh root@151.245.112.241 "
+          tar -czf - --exclude='.git' --exclude='.github' . | ssh -o StrictHostKeyChecking=accept-new root@151.245.112.241 "
             tar -xzf - -C /var/www/84.lu
             cp -a /var/www/84.lu/. /var/www/bio.openrepo.me/
             sed -i 's|https://84.lu/|https://bio.openrepo.me/|g' /var/www/bio.openrepo.me/index.html /var/www/bio.openrepo.me/sitemap.xml /var/www/bio.openrepo.me/robots.txt

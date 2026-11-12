@@ -255,7 +255,6 @@ background var(--md-sys-motion-duration-short) var(--md-sys-motion-easing-standa
 .player-btn:hover{transform:scale(1.05)}
 }
 .player-btn:active{transform:scale(.95)}
-.player-btn .mi{font-size:24px}
 .player-btn-sec{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
 background:transparent;color:var(--md-sys-color-on-surface-variant);flex-shrink:0;
 transition:color var(--md-sys-motion-duration-short) var(--md-sys-motion-easing-standard)}
@@ -265,7 +264,7 @@ transition:color var(--md-sys-motion-duration-short) var(--md-sys-motion-easing-
 .player-seek-w{flex:1;display:flex;align-items:center;gap:10px}
 .player-time{font-family:var(--font-mono);font-size:11px;color:var(--md-sys-color-on-surface-variant);
 min-width:34px;flex-shrink:0}
-.player-progress{position:relative;flex:1;height:16px;display:flex;align-items:center;cursor:pointer}
+.player-progress{position:relative;flex:1;height:16px;display:flex;align-items:center;cursor:pointer;touch-action:none}
 .player-progress::before{content:"";position:absolute;left:0;right:0;height:4px;border-radius:9999px;
 background:var(--md-sys-color-surface-container-highest)}
 .player-progress-bar{position:absolute;left:0;height:4px;border-radius:9999px;
@@ -755,6 +754,7 @@ transition-duration:.01ms!important}
   audio.addEventListener('loadedmetadata', () => {
     durTime.textContent = fmt(audio.duration);
   });
+  if (audio.readyState >= 1) durTime.textContent = fmt(audio.duration);
 
   let dragging = false;
   const updateProgress = pos => {
@@ -797,9 +797,11 @@ transition-duration:.01ms!important}
   progressBar.addEventListener('keydown', e => {
     if (!audio.duration) return;
     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      e.preventDefault();
       audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-      audio.currentTime = Math.max(0, audio.currentTime - 5);
+      e.preventDefault();
+      audio.currentTime = Math.max(audio.currentTime - 5);
     }
   });
 
