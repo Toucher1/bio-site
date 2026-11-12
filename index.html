@@ -280,7 +280,7 @@ background:var(--md-sys-color-primary);width:0%}
 .foot{margin-top:40px;text-align:center;font-size:13px;color:var(--md-sys-color-on-surface-variant);letter-spacing:.3px}
 
 @media(min-width:600px){
-.page{min-height:calc(100dvh - 72px);display:flex;flex-direction:column;justify-content:center}
+.page{min-height:calc(100dvh - 72px);display:flex;flex-direction:column;justify-content:safe center}
 }
 @media(max-width:599px){
 .card{background:color-mix(in srgb,var(--md-sys-color-surface-container-low) 78%,transparent)}
@@ -334,7 +334,7 @@ transition-duration:.01ms!important}
   </div>
   <div class="corner corner-right">
     <div class="lang-w">
-      <button class="lang-btn sl" id="langBtn" type="button" aria-expanded="false" aria-haspopup="listbox" aria-label="Язык">
+      <button class="lang-btn sl" id="langBtn" type="button" aria-expanded="false" aria-haspopup="listbox" aria-label="Язык: RU">
         <svg class="ic" aria-hidden="true"><use href="#i-translate"/></svg><span id="langCur">RU</span>
         <svg class="ic" aria-hidden="true"><use href="#i-caret"/></svg>
       </button>
@@ -386,7 +386,7 @@ transition-duration:.01ms!important}
     </a>
   </nav>
 
-  <section class="player-card reveal" aria-label="Музыкальный плеер">
+  <section class="player-card reveal" id="playerCard" aria-label="Музыкальный плеер">
     <div class="player-cover-wrap">
       <img class="player-cover" src="cover.webp" alt="summer breeze - sadtones" width="56" height="56" loading="lazy">
     </div>
@@ -525,6 +525,7 @@ transition-duration:.01ms!important}
     height = canvas.height = innerHeight;
     updateThemeColors();
     initShapes();
+    if (reduce) animate();
   }
 
   function drawOrganicShape(ctx, radius, lobes, waveRatio, morphPhase) {
@@ -691,11 +692,13 @@ transition-duration:.01ms!important}
       if(I18N[k]) el.textContent=I18N[k][lang];
     });
     const isLb=lang==='lb',isEn=lang==='en';
-    btn.setAttribute('aria-label',isLb?'Sprooch':(isEn?'Language':'Язык'));
+    const langLabel=isLb?'Sprooch':(isEn?'Language':'Язык');
+    btn.setAttribute('aria-label',langLabel+': '+lang.toUpperCase());
     const hs=document.querySelector('.hero');if(hs) hs.setAttribute('aria-label',isLb?'Iwwer mech':(isEn?'About me':'Обо мне'));
     const gr=document.querySelector('.grid');if(gr) gr.setAttribute('aria-label',isLb?'Linken':(isEn?'Links':'Ссылки'));
     menu.querySelectorAll('.menu-item').forEach(b=>
       b.setAttribute('aria-selected',b.dataset.lang===lang?'true':'false'));
+    window.dispatchEvent(new CustomEvent('bio-lang',{detail:lang}));
   };
   menu.querySelectorAll('.menu-item').forEach(b=>
     b.addEventListener('click',()=>{
@@ -718,8 +721,19 @@ transition-duration:.01ms!important}
   const durTime = document.getElementById('durTime');
   const muteBtn = document.getElementById('muteBtn');
   const muteIco = document.getElementById('muteIco');
+  const playerCard = document.getElementById('playerCard');
 
   if(!audio || !playBtn) return;
+
+  const STRINGS = {
+    ru: { player: 'Музыкальный плеер', seek: 'Перемотка', play: 'Воспроизвести', pause: 'Пауза', mute: 'Выключить звук', unmute: 'Включить звук' },
+    en: { player: 'Music player', seek: 'Seek', play: 'Play', pause: 'Pause', mute: 'Mute', unmute: 'Unmute' },
+    lb: { player: 'Musekspiller', seek: 'Spull', play: 'Ofspillen', pause: 'Paus', mute: 'Toun ausmaachen', unmute: 'Toun umaachen' }
+  };
+  const getS = key => {
+    const l = document.documentElement.lang || 'ru';
+    return (STRINGS[l] || STRINGS.ru)[key];
+  };
 
   const fmt = s => {
     if(isNaN(s) || s === Infinity) return '0:00';
@@ -731,8 +745,22 @@ transition-duration:.01ms!important}
   const updatePlayState = playing => {
     const useTag = playIco.querySelector('use');
     if(useTag) useTag.setAttribute('href', playing ? '#i-pause' : '#i-play');
-    playBtn.setAttribute('aria-label', playing ? 'Пауза' : 'Воспроизвести');
+    playBtn.setAttribute('aria-label', playing ? getS('pause') : getS('play'));
   };
+
+  const updateMuteState = () => {
+    const useTag = muteIco.querySelector('use');
+    if(useTag) useTag.setAttribute('href', audio.muted ? '#i-volume-off' : '#i-volume-up');
+    muteBtn.setAttribute('aria-label', audio.muted ? getS('unmute') : getS('mute'));
+  };
+
+  const updateLabels = () => {
+    if (playerCard) playerCard.setAttribute('aria-label', getS('player'));
+    if (progressBar) progressBar.setAttribute('aria-label', getS('seek'));
+    updatePlayState(!audio.paused);
+    updateMuteState();
+  };
+  window.addEventListener('bio-lang', updateLabels);
 
   playBtn.addEventListener('click', () => {
     if (audio.paused) {
@@ -780,7 +808,7 @@ transition-duration:.01ms!important}
 
   progressBar.addEventListener('pointerdown', e => {
     dragging = true;
-    progressBar.setPointerCapture(e.pointerId);
+    try { progressBar.setPointerCapture(e.pointerId); } catch (_) {}
     updateProgress(getPos(e));
   });
   progressBar.addEventListener('pointermove', e => {
@@ -801,16 +829,22 @@ transition-duration:.01ms!important}
       audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
       e.preventDefault();
-      audio.currentTime = Math.max(audio.currentTime - 5);
+      audio.currentTime = Math.max(0, audio.currentTime - 5);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      audio.currentTime = 0;
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      audio.currentTime = audio.duration;
     }
   });
 
   muteBtn.addEventListener('click', () => {
     audio.muted = !audio.muted;
-    const useTag = muteIco.querySelector('use');
-    if(useTag) useTag.setAttribute('href', audio.muted ? '#i-volume-off' : '#i-volume-up');
-    muteBtn.setAttribute('aria-label', audio.muted ? 'Включить звук' : 'Выключить звук');
+    updateMuteState();
   });
+
+  updateLabels();
 })();
 
 
